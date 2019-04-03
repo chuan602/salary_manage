@@ -23,7 +23,7 @@ export default class ListItem extends Component {
                             <Text style={styles.Text}>{this.props.gender}</Text>
                         </View>
                         <View style={styles.Age}>
-                            <Text style={styles.Text}>{this.props.age}</Text>
+                            <Text style={styles.Text}>{this.props.age}岁</Text>
                         </View>
                     </View>
                     <View style={styles.col3}>

@@ -17,13 +17,22 @@ class Home extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            list: []
+            list: [],
+            refreshing: false,
+            salarySort: "-工资排序-",
+            ageSort: "-年龄排序-"
         };
         this.getInitList = this.getInitList.bind(this);
         this.handleDelete = this.handleDelete.bind(this);
+        this.ageSortChange = this.ageSortChange.bind(this);
+        this.updateListBySort = this.updateListBySort.bind(this);
         this.props.navigation.addListener("willFocus", () => {
             if (this.props.navigation.getParam("update")) {
                 this.getInitList();
+                this.setState({
+                    salarySort: "-工资排序-",
+                    ageSort: "-年龄排序-"
+                });
             }
         });
     }
@@ -43,7 +52,7 @@ class Home extends Component {
         headerRight: (
             <TouchableOpacity
                 onPress={() => {
-                    navigation.navigate("AddItem");
+                    navigation.navigate("AddItem", { update: false });
                 }}
             >
                 <Image
@@ -59,7 +68,8 @@ class Home extends Component {
             .get("/list")
             .then(res => {
                 this.setState(() => ({
-                    list: res.data
+                    list: res.data,
+                    refreshing: false
                 }));
             })
             .catch(err => {
@@ -91,50 +101,116 @@ class Home extends Component {
                 );
             });
     }
+
+    updateListBySort(sort, field) {
+        axios
+            .post("/sort", { sort, field })
+            .then(res => {
+                this.setState({
+                    list: res.data
+                });
+            })
+            .catch(err => {
+                ToastAndroid.showWithGravity(
+                    "ERROR！排序失败！",
+                    ToastAndroid.SHORT,
+                    ToastAndroid.CENTER
+                );
+            });
+    }
+
+    ageSortChange(itemValue) {
+        this.setState({ ageSort: itemValue });
+        switch (itemValue) {
+            case "升序":
+                this.setState({ salarySort: "-工资排序-" });
+                this.updateListBySort(1, "age");
+                break;
+            case "降序":
+                this.setState({ salarySort: "-工资排序-" });
+                this.updateListBySort(0, "age");
+                break;
+            default:
+                break;
+        }
+    }
+
+    salarySortChange(itemValue) {
+        this.setState({ salarySort: itemValue });
+        switch (itemValue) {
+            case "升序":
+                this.setState({ ageSort: "-工资排序-" });
+                this.updateListBySort(1, "salary");
+                break;
+            case "降序":
+                this.setState({ ageSort: "-工资排序-" });
+                this.updateListBySort(0, "salary");
+                break;
+            default:
+                break;
+        }
+    }
+
     render() {
         return (
             <View style={styles.Container}>
                 <View style={styles.sortBox}>
                     <View style={styles.Label}>
-                        <Text>分类查询：</Text>
+                        <Text style={styles.LabelText}>排序方式：</Text>
                     </View>
                     <View style={styles.PickerBox}>
-                        <Picker style={{ height: 50, width: 100 }}>
-                            <Picker.Item label="Java" value="java" />
-                            <Picker.Item label="JavaScript" value="js" />
+                        <Picker
+                            style={{ height: 50, width: 120, color: "#666" }}
+                            mode="dropdown"
+                            selectedValue={this.state.ageSort}
+                            onValueChange={itemValue => {
+                                this.ageSortChange(itemValue);
+                            }}
+                        >
+                            <Picker.Item
+                                label="-年龄排序-"
+                                value="-年龄排序-"
+                            />
+                            <Picker.Item label="升序" value="升序" />
+                            <Picker.Item label="降序" value="降序" />
                         </Picker>
-                        <Picker style={{ height: 50, width: 100 }}>
-                            <Picker.Item label="Java" value="java" />
-                            <Picker.Item label="JavaScript" value="js" />
-                        </Picker>
-                        <Picker style={{ height: 50, width: 100 }}>
-                            <Picker.Item label="Java" value="java" />
-                            <Picker.Item label="JavaScript" value="js" />
-                        </Picker>
-                    </View>
-                </View>
-                <View style={styles.sortBox}>
-                    <View style={styles.Label}>
-                        <Text>排序方式：</Text>
-                    </View>
-                    <View style={styles.PickerBox}>
-                        <Picker style={{ height: 50, width: 100 }}>
-                            <Picker.Item label="Java" value="java" />
-                            <Picker.Item label="JavaScript" value="js" />
-                        </Picker>
-                        <Picker style={{ height: 50, width: 100 }}>
-                            <Picker.Item label="Java" value="java" />
-                            <Picker.Item label="JavaScript" value="js" />
+                        <Picker
+                            style={{ height: 50, width: 120, color: "#666" }}
+                            mode="dropdown"
+                            selectedValue={this.state.salarySort}
+                            onValueChange={itemValue => {
+                                this.salarySortChange(itemValue);
+                            }}
+                        >
+                            <Picker.Item
+                                label="-工资排序-"
+                                value="-工资排序-"
+                            />
+                            <Picker.Item label="升序" value="升序" />
+                            <Picker.Item label="降序" value="降序" />
                         </Picker>
                     </View>
                 </View>
                 <FlatList
-                    style={{ flex: 1 , marginEnd: -10, paddingEnd: 10}}
+                    refreshing={this.state.refreshing}
+                    onRefresh={() => {
+                        this.setState({
+                            refreshing: true,
+                            salarySort: "-工资排序-",
+                            ageSort: "-年龄排序-"
+                        });
+                        this.getInitList();
+                    }}
+                    style={{ flex: 1, marginEnd: -10, paddingEnd: 10 }}
                     data={this.state.list}
                     keyExtractor={item => `${item.id}`}
                     ItemSeparatorComponent={() => <SeparatorLine />}
                     renderItem={({ item }) => (
-                        <ListItem handleDelete={this.handleDelete} navigation={this.props.navigation} {...item} />
+                        <ListItem
+                            handleDelete={this.handleDelete}
+                            navigation={this.props.navigation}
+                            {...item}
+                        />
                     )}
                 />
             </View>
@@ -166,12 +242,16 @@ const styles = StyleSheet.create({
         includeFontPadding: false
     },
     PickerBox: {
+        flex: 1,
         flexDirection: "row",
         justifyContent: "space-between"
     },
     AddImg: {
         width: 20,
         height: 20
+    },
+    LabelText: {
+        color: "#000"
     }
 });
 
